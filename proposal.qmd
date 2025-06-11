@@ -1,11 +1,10 @@
 ---
-title: "Proposal title"
+title: "Mapping FBI Crime Data Reporting Across the U.S."
 subtitle: "Proposal"
-author: 
-  - name: "Team Name"
-    affiliations:
-      - name: "School of Information, University of Arizona"
-description: "Project description"
+author: "Ashton Norman"
+  - affiliations:
+      - name: "College of Engineering, University of Arizona"
+description: "This project will explore patterns in FBI crime reporting participation using the TidyTuesday dataset on agency participation in the National Incident-Based Reporting System (NIBRS)."
 format:
   html:
     code-tools: true
@@ -21,24 +20,135 @@ execute:
 ```{r}
 #| label: load-pkgs
 #| message: false
+#| warning: false
+
+#Install once in Console:
+#install.packages(c("tidyverse", "tidytuesdayR", "gt","scales", "htmltools"))
+
 library(tidyverse)
+library(tidytuesdayR) #used to load the dataset
+library(scales) #used to format percentages 
+library(gt) #table formatting https://gt.rstudio.com/ - articles followed for usage
 ```
 
 ## Dataset
 
-```{r}
-#| label: load-dataset
+```{r Dataset}
+#| label: Dataset Load & Preview
 #| message: false
+#Load agency reporting data
+agencies <- tidytuesdayR::tt_load(2025, week=7)$agencies
+
+#Alternative - load from .csv located in the data folder
+#agencies <- read_csv("data/agencies.csv") 
+
+head(agencies)
+
+#Setting up variables from the data
+state <- agencies$state
+county <- agencies$county
+latitude <- agencies$latitude
+longitude <- agencies$longitude
+agency_type <- agencies$agency_type
+agency_ori <- agencies$ori
+report_status <- agencies$is_nibrs
+start_date <- agencies$nibrs_start_date
+
 ```
 
-A brief description of your dataset including its provenance, dimensions, etc. as well as the reason why you chose this dataset.
+This dataset was sourced from the [FBI's Crime Data API](#0) and curated by [Ford Johnson](#0) for the [TidyTuesday project on February 18, 2025](#0). The data includes law enforcement participation in the National Incident-Based Reporting System (NIBRS), agency names, type (county/city), geographic location, and reporting start date.
 
-Make sure to load the data and use inline code for some of this information.
+#### Dataset Overview
+
+```{r dataset overview}
+
+#| label: dataset-overviewl
+#| message: false
+
+library(glue)
+# Summarize basic information about the dataset
+
+percent_reporting <- percent(sum(report_status=="TRUE", na.rm=TRUE)/nrow(agencies))
+
+agencies_vars <- c("County", "State", "Agency Type", "Agency (ORI)", "Reporting", "Start Date")
+agencies_class <- c(class(county), class(state), class(agency_type), class(report_status), class(start_date))
+
+notes <- c(
+  glue("Number of counties included: {length(unique(county))}"), 
+  glue("Number of states included: {length(unique(state))}"), 
+  paste(na.omit(unique(agency_type)), collapse=', '), 
+  glue("Number of agencies included: {length(unique(agency_ori))}"),
+  glue("Percentage of agencies reporting: {percent_reporting}"),
+  paste("Date Range: ", min(start_date, na.rm=TRUE), "to", max(start_date, na.rm=TRUE)))
+
+agencies_summary <- data.frame(agencies_vars, notes)
+
+colnames(agencies_summary) <- c("Variables", "Notes")
+
+gt(agencies_summary) |>
+  tab_header(
+    title = "Dataset Overview") |>
+  tab_style(
+    styl=cell_text(weight="bold"),
+    locations=cells_column_labels()
+  )
+
+```
+
+```{r Paticipation by state, fig.height=6}
+
+#| label: Participation by state
+#| message: false
+
+state_agencies_all <- agencies |>
+ count(state)  
+
+state_agencies_report <- agencies |>
+ filter(report_status=="TRUE") |>
+  count(state)
+
+state_agencies <- merge(state_agencies_all, state_agencies_report, by="state")
+
+state_agencies$state_agencies_percent <- percent(state_agencies$n.y/state_agencies$n.x, accuracy=1)
+
+colnames(state_agencies) <- c("State", "Total Agencies", "Agencies Reporting", "Percent Participating")
+
+ggplot(state_agencies, aes(x=reorder(State, `Total Agencies`)))+
+  geom_col(aes(y=`Total Agencies`, fill="Total Agencies"))+
+  geom_col(aes(y=`Agencies Reporting`, fill="Agencies Reporting"))+
+  geom_text(aes(
+    y=`Total Agencies`+100,
+    label=`Percent Participating`),
+    size=3,
+    color="gray30")+
+  coord_flip()+
+   scale_fill_manual(
+     values = c("Total Agencies" = "lightcyan3","Agencies Reporting"="darkcyan"))+
+  labs(
+    x=NULL,
+    y="Number of Agencies",
+    title = "Agency Participation by State",
+    fill=NULL
+  )+
+  theme_minimal()
+
+```
+
+I selected this dataset because it includes geographic variables such as `longitude`, `latitude`, `state`, and `county` that can be used for location-specific and state-level map visualizations. Participating agencies also have a `start_date`, which will allow for visualizations of timelines and pattern changes. My work involves research on infectious diseases, so improving my skills in these areas would be useful for communicating information such as outbreak data trends.
 
 ## Questions
 
-The two questions you want to answer.
+1.  Are there patterns of NIBRS adoption by region or agency type?
+2.  How has NIBRS participation expanded geographically over time?
 
 ## Analysis plan
 
--   A plan for answering each of the questions including the variables involved, variables to be created (if any), external data to be merged in (if any).
+-   Question 1: Current participation levels have been explored above at the state level and graphed on the bar chart titled *Agency Participation by State,* which compares total and number of participating agencies within states and includes the percentage reporting to NIBRS as labels. I plan to build on this to further explore patterns and trends by agency type and region using the variables below:
+    -   `state`: to summarize participation by geographic region
+    -   `county`: to potentially be used for a more detailed look at specific regions within states or across certain regions
+    -   `agency_type`: for comparing participation across agency types
+    -   `report_status`: variable for determining participation status
+-   Question 2: Similar to Question 1, I will build off of the current participation calculations to analyze participation expansion over time. Faceting will be used to show changes in participation by grouped time variables covering 1985-2024 (likely groups of either 5 or 10 years - e.g., 1985-1994, 1995-2004, 2005-2014, 2015-2024). Coordinate data will be used to map agency locations and show how participation has expanded geographically. Relevant variables include:
+    -   `start_date`: will provide years when agencies began reporting to NIBRS
+    -   `latitude` and `longitude`: will be used for mapping agency locations
+    -   `report_status`: variable for determining participation status
