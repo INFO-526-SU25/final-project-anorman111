@@ -1,8 +1,9 @@
 ---
 title: "Mapping FBI Crime Data Reporting Across the U.S."
 subtitle: "Proposal"
-author: "Ashton Norman"
-  - affiliations:
+author: 
+  - name: "Ashton Norman"
+    affiliations:
       - name: "College of Engineering, University of Arizona"
 description: "This project will explore patterns in FBI crime reporting participation using the TidyTuesday dataset on agency participation in the National Incident-Based Reporting System (NIBRS)."
 format:
@@ -22,14 +23,15 @@ execute:
 #| message: false
 #| warning: false
 
-#Install once in Console:
-#install.packages(c("tidyverse", "tidytuesdayR", "gt","scales", "htmltools", "usmap"))
+#Install packman once in Console:
+#install.packages("pacman")
 
-library(tidyverse)
-library(tidytuesdayR) #used to load the dataset
-library(scales) #used to format percentages 
-library(gt) #table formatting https://gt.rstudio.com/ - articles followed for usage
-library(usmap) #US map package, reference manual and vignettes followed for usage https://cran.r-project.org/web/packages/usmap/index.html 
+pacman::p_load(
+  tidyverse,
+  tidytuesdayR, #used to load the dataset
+  scales, #used to format percentages 
+  gt, #table formatting https://gt.rstudio.com/ - articles followed for usage
+  usmap) #US map package, reference manual and vignettes followed for usage https://cran.r-project.org/web/packages/usmap/index.html 
 ```
 
 ## Dataset
@@ -128,7 +130,8 @@ ggplot(state_agencies, aes(x=reorder(State, `Total Agencies`)))+
   labs(
     x=NULL,
     y="Number of Agencies",
-    title = "Agency Participation by State",
+    title="Agency NIBRS Participation by State",
+    caption="Bar chart showing the number of law enforcement agencies in each state and number participating in the National Incident-Based Reporting System (NIBRS). Labels indicate the percentage of agencies in each state currently reporting to NIBRS",
     fill=NULL
   )+
   theme_minimal()
@@ -214,6 +217,75 @@ agencies |>
     -   Visual Methods: Faceted maps to show changes in participation over time covering 1985-2024 (likely groups of either 5 or 10 years - e.g., 1985-1994, 1995-2004, 2005-2014, 2015-2024) - may also explore animation if possible. Depending on the final quantitative methods, other visualizations such as line charts, bar plots, or cumulative growth curves may be included to help represent results over time.
     -   Variables:
         -   `start_date`: will provide years when agencies began reporting to NIBRS
+
         -   `latitude` and `longitude`: will be used for mapping agency locations
+
             -   `county` will be used as an alternative if using `usmap` package
+
         -   `report_status`: variable for determining participation status
+
+## Plan of Attack
+
+```{r}
+#| label: Participation by state
+#| message: false
+
+timeline <- tibble::tibble(
+  `Task Name`=c("Proposal draft", 
+                "Resolve peer/instructor review", 
+                "Data wrangling", 
+                "Q1 Analysis calculations", 
+                "Q1 Complete visualizations", 
+                "Q2 Analysis calculations", 
+                "Q2 Complete visualizations", 
+                "Finalize project and presentation", 
+                "Submit final report"),
+  `Status`=c("Complete",
+             "In progress",
+             "In progress",
+             "In progress",
+             "In progress",
+             "To be completed",
+             "To be completed",
+             "To be completed",
+             "To be completed"
+             ),
+  `Due`=c("Completed 06/10/25",
+          "06/18/25",
+          "06/21/25",
+          "06/22/25",
+          "06/24/25",
+          "06/28/25",
+          "06/29/25",
+          "07/02/25",
+          "07/02/25"),
+  `Priority`=c(
+    "High",
+    "High",
+    "Moderate",
+    "Moderate",
+    "Moderate",
+    "Moderate",
+    "Moderate",
+    "High",
+    "High"),
+  `Summary`=c(
+    "Draft proposal with questions, analysis plan, and exploratory analysis/visualization",
+    "Address feedback received during peer/instructor review",
+    "Prepare data for analysis, finalize required variables",
+    "Calculate participation by area and agency type",
+    "Create plots and summaries by agency type and region",
+    "Calculate rates of adoption over time",
+    "Create maps and time-based plots",
+    "Complete and polish results summaries and interpretation; finish and record presentation",
+    "Submit final report, recorded presentation, and website"
+  ))
+
+timeline |>
+  gt() |>
+  tab_header(title = "Plan of Attack Timeline") |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels())
+
+```
