@@ -23,17 +23,18 @@ execute:
 #| warning: false
 
 #Install once in Console:
-#install.packages(c("tidyverse", "tidytuesdayR", "gt","scales", "htmltools"))
+#install.packages(c("tidyverse", "tidytuesdayR", "gt","scales", "htmltools", "usmap"))
 
 library(tidyverse)
 library(tidytuesdayR) #used to load the dataset
 library(scales) #used to format percentages 
 library(gt) #table formatting https://gt.rstudio.com/ - articles followed for usage
+library(usmap) #US map package, reference manual and vignettes followed for usage https://cran.r-project.org/web/packages/usmap/index.html 
 ```
 
 ## Dataset
 
-```{r Dataset}
+```{r}
 #| label: Dataset Load & Preview
 #| message: false
 #Load agency reporting data
@@ -60,7 +61,7 @@ This dataset was sourced from the [FBI's Crime Data API](#0) and curated by [For
 
 #### Dataset Overview
 
-```{r dataset overview}
+```{r}
 
 #| label: dataset-overviewl
 #| message: false
@@ -92,10 +93,10 @@ gt(agencies_summary) |>
     styl=cell_text(weight="bold"),
     locations=cells_column_labels()
   )
-
+view(agencies)
 ```
 
-```{r Paticipation by state, fig.height=6}
+```{r fig.height=10}
 
 #| label: Participation by state
 #| message: false
@@ -143,12 +144,76 @@ I selected this dataset because it includes geographic variables such as `longit
 
 ## Analysis plan
 
--   Question 1: Current participation levels have been explored above at the state level and graphed on the bar chart titled *Agency Participation by State,* which compares total and number of participating agencies within states and includes the percentage reporting to NIBRS as labels. I plan to build on this to further explore patterns and trends by agency type and region using the variables below:
-    -   `state`: to summarize participation by geographic region
-    -   `county`: to potentially be used for a more detailed look at specific regions within states or across certain regions
-    -   `agency_type`: for comparing participation across agency types
-    -   `report_status`: variable for determining participation status
--   Question 2: Similar to Question 1, I will build off of the current participation calculations to analyze participation expansion over time. Faceting will be used to show changes in participation by grouped time variables covering 1985-2024 (likely groups of either 5 or 10 years - e.g., 1985-1994, 1995-2004, 2005-2014, 2015-2024). Coordinate data will be used to map agency locations and show how participation has expanded geographically. Relevant variables include:
-    -   `start_date`: will provide years when agencies began reporting to NIBRS
-    -   `latitude` and `longitude`: will be used for mapping agency locations
-    -   `report_status`: variable for determining participation status
+-   Question 1: Current participation levels have been explored above at the state level and graphed on the bar chart titled *Agency Participation by State,* which compares total and number of participating agencies within states and includes the percentage reporting to NIBRS as labels. I plan to build on this to further explore patterns and trends by agency type and region (Northeast, Midwest, South, and West).
+    -   Quantitative Methods: Calculate proportion of participating agencies (`report_status==TRUE`) within each `region` and by `agency_type`, if time permits, significance tests may be explored.
+    -   Visual Methods: Bar or dot plots for side-by-side comparisons - other options for visual comparison may be explored as well.
+    -   Variables:
+        -   `state`: to summarize participation by state and region
+        -   `county`: to potentially be used for a more detailed look at specific areas within states or across certain regions
+        -   `agency_type`: for comparing participation across agency types
+        -   `report_status`: variable for determining participation status
+        -   `region`: states grouped to 4 US Census regions based on definitions referenced from the [CDC](https://www.cdc.gov/nchs/hus/sources-definitions/geographic-region.htm) website. Full list and map of states by region included below:
+
+```{r}
+#| label: US Regions List
+#| message: false
+
+
+region_states <- tibble::tibble(
+  Region = c("Northeast", "Midwest", "South", "West"),
+  States = c(
+    "Connecticut, Maine, Massachusetts, New Hampshire, New Jersey, New York, Pennsylvania, Rhode Island, Vermont",
+    "Illinois, Indiana, Iowa, Kansas, Michigan, Minnesota, Missouri, Nebraska, North Dakota, Ohio, South Dakota, Wisconsin", 
+    "Alabama, Arkansas, Delaware, Florida, Georgia, Kentucky, Louisiana, Maryland, Mississippi, North Carolina, Oklahoma, South Carolina, Tennessee, Texas, Virginia, West Virginia",
+    "Alaska, Arizona, California, Colorado, Hawaii, Idaho, Montana, Nevada, New Mexico, Oregon, Utah, Washington, Wyoming"))
+
+region_states |>
+  gt() |>
+  tab_header(title = "U.S. Regions") |>
+  tab_source_note(
+    source_note = md("*Regions defined by the CDC based on U.S. Census Bureau groupings,Source: https://www.cdc.gov/nchs/hus/sources-definitions/geographic-region.htm)*")) |>
+  tab_style(
+    style = cell_text(weight = "bold"),
+    locations = cells_column_labels())
+
+  
+```
+
+```{r}
+#| label: US Regions Map
+#| message: false
+
+#add regions column to agencies data frame
+agencies <- agencies |>
+  mutate(region=case_when(
+    state %in% c("Connecticut", "Maine", "Massachusetts", "New Hampshire", "New Jersey", "New York", "Pennsylvania", "Rhode Island", "Vermont") ~ "Northeast",
+    state %in% c("Illinois", "Indiana", "Iowa", "Kansas", "Michigan", "Minnesota", "Missouri", "Nebraska", "North Dakota", "Ohio", "South Dakota", "Wisconsin") ~ "Midwest",
+    state %in% c("Alabama", "Arkansas", "Delaware", "Florida", "Georgia", "Kentucky", "Louisiana", "Maryland", "Mississippi", "North Carolina", "Oklahoma", "South Carolina", "Tennessee", "Texas", "Virginia", "West Virginia") ~ "South",
+    state %in% c("Alaska", "Arizona", "California", "Colorado", "Hawaii", "Idaho", "Montana", "Nevada", "New Mexico", "Oregon", "Utah", "Washington", "Wyoming") ~ "West"))
+
+agencies |>
+  distinct(state, region) |>
+  plot_usmap(
+  data=_,
+    values = "region",
+    exclude=c("District of Columbia"), #DC not in agencies so it needs to be explicitly excluded when using usmap
+    color = "white")+ 
+  scale_fill_manual(
+    name = "Region", 
+    values=c(
+      "Northeast"="steelblue3",
+      "Midwest"="mediumorchid",
+      "South"="deeppink2",
+      "West"="coral")) + 
+  labs(title = "US Regions")+
+  theme(legend.position = "right")
+```
+
+-   Question 2: Similar to Question 1, I will build off of the current participation calculations to analyze participation expansion over time. While the `usmap` package was utilized to create the map above, but I do not belive it has coordinate plotting capabilities. Alternatives will be explored but I may change to county plotting if needed for time restraints.
+    -   Quantitative Methods: Rates of adoption will be calculated for each year and/or time period - potentially as trend lines for general direction and rates of adoption or growth curves for cumulative change.
+    -   Visual Methods: Faceted maps to show changes in participation over time covering 1985-2024 (likely groups of either 5 or 10 years - e.g., 1985-1994, 1995-2004, 2005-2014, 2015-2024) - may also explore animation if possible. Depending on the final quantitative methods, other visualizations such as line charts, bar plots, or cumulative growth curves may be included to help represent results over time.
+    -   Variables:
+        -   `start_date`: will provide years when agencies began reporting to NIBRS
+        -   `latitude` and `longitude`: will be used for mapping agency locations
+            -   `county` will be used as an alternative if using `usmap` package
+        -   `report_status`: variable for determining participation status
