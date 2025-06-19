@@ -142,8 +142,10 @@ I selected this dataset because it includes geographic variables such as `longit
 
 ## Questions
 
-1.  Are there patterns of NIBRS adoption by region or agency type?
-2.  How has NIBRS participation expanded geographically over time?
+1.  Which U.S. states and regions have lower levels of of NIBRS adoption by law enforcement agencies, and are there patterns by by geography or agency type?
+    1.  Hypothesis: States with a mix of large cities and rural areas will have lower NIBRS participation due to variation in agency structure and likelihood of having a large number of total agencies.
+2.  How has NIBRS participation expanded geographically from 1985 to 2024?
+    1.  Hypothesis: NIBRS adoption has increased more rapidly in the last decade due to advancements in technology and broader adoption of centralized and streamlined data collection and reporting systems. I expect states with smaller populations to have higher adoption rates earlier, while more populous states will lag behind.
 
 ## Analysis plan
 
@@ -241,7 +243,7 @@ timeline <- tibble::tibble(
                 "Finalize project and presentation", 
                 "Submit final report"),
   `Status`=c("Complete",
-             "In progress",
+             "Complete",
              "In progress",
              "In progress",
              "In progress",
@@ -250,7 +252,7 @@ timeline <- tibble::tibble(
              "To be completed",
              "To be completed"
              ),
-  `Due`=c("Completed 06/10/25",
+  `Due`=c("06/10/25",
           "06/18/25",
           "06/21/25",
           "06/22/25",
