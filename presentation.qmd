@@ -1,11 +1,12 @@
 ---
-title: "Project title"
-subtitle: "INFO 526 - Summer 2024 - Final Project"
-author: "Author names"
+title: "Mapping FBI Crime Data Reporting Across the U.S."
+subtitle: "INFO 526 - Summer 2025 - Final Project"
+author: "Ashton Norman"
 title-slide-attributes:
-  data-background-image: images/watercolour_sys02_img34_teacup-ocean.jpg
+  data-background-image: images/presentation_background2.jpg
+  data-background-color: "black"
   data-background-size: stretch
-  data-background-opacity: "0.7"
+  data-background-opacity: ".6"
   data-slide-number: none
 format:
   revealjs:
@@ -22,7 +23,11 @@ execute:
 
 # Load packages here
 pacman::p_load(tidymodels,
-               tidyverse)
+               tidyverse,
+               broom,#remove tidy error on render
+               #penguins, #remove penguins error on render
+               palmerpenguins
+               )
 
 ```
 
@@ -128,10 +133,10 @@ penguins |>
 If you want to generate a table, make sure it is in the HTML format (instead of Markdown or other formats), e.g.,
 
 ```{r}
-penguins |> 
-  head() |>
-  kableExtra::kable() |>
-  kableExtra::kable_styling()
+#penguins |> 
+ # head() |>
+  #kableExtra::kable() |>
+  #kableExtra::kable_styling()
 ```
 
 ## Images

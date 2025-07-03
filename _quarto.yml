@@ -1,12 +1,13 @@
 project:
   type: website
+  output-dir: docs 
 
 website:
-  title: Project Title
+  title: "Mapping FBI Crime Data Reporting Across the U.S."
   navbar:
     right:
       - icon: github
-        href: https://github.com/INFO-526-SU24/project-01 # Needs to be changed to your project repo
+        href: https://github.com/INFO-526-SU25/final-project-anorman111
     left:
       - text: Project
         href: index.qmd

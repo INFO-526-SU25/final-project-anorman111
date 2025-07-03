@@ -1,11 +1,11 @@
 ---
-title: "Project Title"
-subtitle: "INFO 526 - Summer 2024 - Final Project"
+title: "Mapping FBI Crime Data Reporting Across the U.S."
+subtitle: "INFO 526 - Summer 2025 - Final Project"
 author: 
-  - name: "Team name"
+  - name: "Ashton Norman"
     affiliations:
-      - name: "School of Information, University of Arizona"
-description: "Project description"
+      - name: "College of Engineering, University of Arizona"
+description: "This project will explore patterns in FBI crime reporting participation using the TidyTuesday dataset on agency participation in the National Incident-Based Reporting System (NIBRS)."
 format:
    html:
     code-tools: true
@@ -17,6 +17,354 @@ execute:
   echo: false
 ---
 
-## Abstract
+```{r}
+#| label: load-pkgs
+#| message: false
+#| warning: false
 
-Add project abstract here.
+#Install packman once in Console:
+#install.packages("pacman")
+
+pacman::p_load(
+  tidyverse,
+  tidytuesdayR,
+  scales, 
+  gt, 
+  usmap,
+  tigris, 
+  sf,
+  maps,
+  readxl,
+  janitor,
+  stringr,
+  magick, 
+  animation
+)
+
+```
+
+```{r}
+#| label: load data
+#| message: false
+#| warning: false
+
+#Load agency reporting data
+agencies <- tidytuesdayR::tt_load(2025, week=7)$agencies
+
+#Setting up variables from the data
+state <- agencies$state
+county <- agencies$county
+latitude <- agencies$latitude
+longitude <- agencies$longitude
+agency_type <- agencies$agency_type
+agency_ori <- agencies$ori
+report_status <- agencies$is_nibrs
+start_date <- agencies$nibrs_start_date
+```
+
+## Introduction
+
+This project uses data on law enforcement participation in the National Incident-Based Reporting System (NIBRS), sourced from the [FBI's Crime Data API](#0) and curated by [Ford Johnson](https://github.com/bradfordjohnson) for the [TidyTuesday project on February 18, 2025](https://github.com/rfordatascience/tidytuesday/tree/main/data/2025/2025-02-18). NIBRS is a reporting system for collecting detailed, incident-level information on crimes. Introduced in the 1980's, NIBRS has become the primary system for collecting and reporting crime data to the FBI after the Uniform Crime Reporting (UCR) program was phased out and officially retired in 2021 ([Ridgeway, 2024](https://community.amstat.org/blogs/greg-ridgeway/2024/06/06/ucr-srs-and-nibrs)). The data set includes agency names, types (e.g., city, county, tribal), geographic details, and reporting start dates.
+
+## Question 1: NIBRS Participation by State and Agency Type
+
+#### Introduction
+
+-   **Question:** Which U.S. states and regions have lower levels of NIBRS adoption by law enforcement agencies, and are there patterns by geography or agency type?
+
+-   **Hypothesis:** States with a mix of large cities and rural areas will have lower NIBRS participation due to variation in agency structure and a higher number of total agencies.
+
+This question focuses no identifying U.S. states and regions (Northeast, Midwest, South, and West) with the lowest levels of participation in NIBRS. Agency-level data was used to summarize participation status by state, then regional classifications were added to group the results by area. Agency type was also included to determine if low compliance rates were driven by common types (city, county) or more likely to occur in areas with a wider variety of smaller agencies.
+
+#### Approach
+
+Two visualizations were created to explore current NIBRS participation by region, state, and agency type. The first, *FBI Crime Reporting Participation*, is a series of maps that uses a 50 state layout of the United States with inserts of Alaska and Hawaii for ease of viewing and to align with the `agencies` dataset, which does not include any additional U.S. territories. The maps were created using the `sf` package to handle spacial data and state shapes via the `tigris` package. There are two regional maps (with and without state outlines) that use grouped results for percent participation by region, as well as a state-level map with color fill representing participation levels. Plot animation was attempted using `gganimate`, but issues with the multi-layer region-only map led to a switch to a simple GIF created using `magick`.
+
+The second plot, *Reported vs Not Reported Agencies by Type*, is a horizontal diverging bar chart of the number of agencies within the 10 states with the lowest reporting percentages. Each bar is stacked by agency type and split by reporting status (reporting on the right, non-reporting on the left). This format shows allows for visualization of the total number of agencies within these states, while allowing for division by agency type and reporting status. It was chosen to complement the map plot by providing more detail on the least compliant states and answer the second half of the Question 1.
+
+#### Analysis
+
+```{r}
+#| label: Q1-plot-prep
+#| message: false
+#| warning: false
+#| echo: false
+#| include: false
+
+#add regions column to agencies data frame
+agencies <- agencies |>
+  mutate(region=case_when(
+    state %in% c("Connecticut", "Maine", "Massachusetts", "New Hampshire", "New Jersey", "New York", "Pennsylvania", "Rhode Island", "Vermont") ~ "Northeast",
+    state %in% c("Illinois", "Indiana", "Iowa", "Kansas", "Michigan", "Minnesota", "Missouri", "Nebraska", "North Dakota", "Ohio", "South Dakota", "Wisconsin") ~ "Midwest",
+    state %in% c("Alabama", "Arkansas", "Delaware", "Florida", "Georgia", "Kentucky", "Louisiana", "Maryland", "Mississippi", "North Carolina", "Oklahoma", "South Carolina", "Tennessee", "Texas", "Virginia", "West Virginia") ~ "South",
+    state %in% c("Alaska", "Arizona", "California", "Colorado", "Hawaii", "Idaho", "Montana", "Nevada", "New Mexico", "Oregon", "Utah", "Washington", "Wyoming") ~ "West"))
+
+state_agencies_all <- agencies |>
+ count(state)  
+
+state_agencies_report <- agencies |>
+ filter(report_status=="TRUE") |>
+  count(state)
+
+state_agencies <- merge(state_agencies_all, state_agencies_report, by="state")
+
+state_agencies$state_agencies_percent <- state_agencies$n.y/state_agencies$n.x
+state_agencies$state_agencies_percentages <- percent(state_agencies$n.y/state_agencies$n.x, accuracy=1)
+
+colnames(state_agencies) <- c("State", "Total_Agencies", "Agencies_Reporting", "Percent_Participating", "Percentages")
+
+state_regions <- agencies |>
+  distinct(state, region) |>
+  rename(State=state)
+
+# Join with your summary data
+state_agencies <- state_agencies |>
+  left_join(state_regions, by="State")
+
+region_summary <- state_agencies |>
+  group_by(region) |>
+  summarise(
+    Region_Participation=sum(Agencies_Reporting) / sum(Total_Agencies)
+  )
+
+# Add region to each state and bring in region-level percentage
+state_agencies_with_region <- state_agencies |>
+  left_join(region_summary, by="region")
+
+us_states <- suppressMessages(tigris::states(cb=TRUE)) |>
+  filter(GEOID < "60") |>  # Keep states only, remove territories
+  shift_geometry()
+
+usbbox <- suppressMessages(st_bbox(us_states))
+
+# Join using full state names
+us_states <- us_states |>
+  left_join(state_agencies_with_region, by=c("NAME"="State"))
+
+#attempt of many at stopping the progress bar rendering before setting include: false
+library(purrr)
+
+quiet_union <- quietly(function(x) {
+  x |>
+    group_by(region) |>
+    summarise(geometry=st_union(geometry), .groups="drop")
+})
+
+region_shapes <- quiet_union(us_states)$result
+
+region_shapes <- suppressMessages(st_transform(region_shapes, st_crs(us_states)))
+
+options(tigris_use_cache=TRUE)
+
+
+#prep for bar graph
+
+#bottom 10 states in NIBRS
+lowest_states <- state_agencies |>
+  arrange(Percent_Participating) |>
+  slice_head(n=10) |>
+  pull(State)
+
+agency_diverging <- agencies |>
+  filter(state %in% lowest_states, !is.na(agency_type)) |>
+  mutate(reporting_status=ifelse(is_nibrs=="TRUE", "Reported", "Not Reported")) |>
+  group_by(state, agency_type, reporting_status) |>
+  summarise(count=n(), .groups="drop") |>
+  mutate(
+    count=ifelse(reporting_status=="Not Reported", -count, count)
+  )
+```
+
+```{r}
+#| label: plot-map-series
+#| echo: true
+#| warning: false
+#| message: false
+#| fig-width: 6
+#| fig-height: 4
+#| code-fold: true
+
+Q1_map_function <- function(participation_column, subtitles, color1, region_outlines=NULL) {
+  Q1_map <- ggplot() +
+    geom_sf(data=us_states, aes(fill={{ participation_column }}), color=color1, linewidth=0.5)
+  
+  # Layer only for region outlines
+  if (!is.null(region_outlines)) {
+    Q1_map <- Q1_map + geom_sf(data=region_outlines, fill=NA, color="white", linewidth=0.5)
+  }
+  Q1_map + scale_fill_viridis_c(
+      option="plasma", direction=-1,
+      limits=c(0, 1),
+      breaks=c(0.25, 0.5, 0.75, 1),
+      labels=percent_format(accuracy=1)
+    ) +
+    coord_sf(
+      xlim=c(usbbox["xmin"], usbbox["xmax"]),
+      ylim=c(usbbox["ymin"], usbbox["ymax"]),
+      expand=FALSE,
+      datum=NA
+    ) +
+    labs(
+      title="FBI Crime Reporting Participation",
+      subtitle=subtitles,
+      caption="Source: Shapefiles obtained using {tigris} R package, v2.0.1.\nNIBRS participation data sourced via the TidyTuesday project (Feb 18, 2025).\nRegional groupings based on CDC definitions.",
+      fill="Percent Participating"
+    ) +
+    theme_void()
+}
+
+Q1map1 <- Q1_map_function(
+  participation_column=Region_Participation,
+  subtitles="By Region",
+  color1=NA,
+  region_outlines=region_shapes
+  )
+
+Q1map2 <- Q1_map_function(
+  participation_column=Region_Participation,
+  subtitles="By Region",
+  color1="white"
+)
+
+Q1map3 <- Q1_map_function(
+  participation_column=Percent_Participating,
+  subtitles="By State",
+  color1="white"
+)
+
+#https://stackoverflow.com/questions/65571964/create-fade-in-and-fade-out-gif-in-r-magick-package
+
+ggsave(path="images", filename="Q1map1.png", Q1map1, width=6, height=3.5, dpi=150)
+ggsave(path="images", filename="Q1map2.png", Q1map2, width=6, height=3.5, dpi=150)
+ggsave(path="images", filename="Q1map3.png", Q1map3, width=6, height=3.5, dpi=150)
+
+map1png <- image_read("images/Q1map1.png")
+map2png <- image_read("images/Q1map2.png")
+map3png <- image_read("images/Q1map3.png")
+
+Q1gif <-  c(map1png, map2png, map3png, map2png) |>
+  image_morph(25) |>
+  image_animate(fps=5, optimize=TRUE) |>
+  suppressMessages()
+
+image_write(Q1gif, "images/Q1animation.gif")
+```
+
+![](images/Q1animation.gif)
+
+```{r}
+#| label: plot-diverge
+#| echo: true
+#| warning: false
+#| message: false
+#| fig-width: 6
+#| fig-height: 4
+#| code-fold: true
+
+ggplot(agency_diverging, 
+       aes(x=count, y=reorder(state, count), fill=agency_type)) +
+  geom_bar(stat="identity", position="stack") +
+  geom_vline(xintercept=0, color="gray40", linetype="dashed") +
+  scale_fill_viridis_d(option="plasma") +  
+  labs(
+    title="Reported vs Not Reported Agencies by Type (10 lowest participation states)",
+    caption="Source: FBI Crime Data API via the TidyTuesday project (Feb 18, 2025).",
+    x="Number of Agencies (Not Reported | Reported)",
+    y="State",
+    fill="Agency Type"
+  ) +
+  theme_minimal()
+
+
+```
+
+#### Discussion
+
+The map and regional summary revealed that the Northeast region has the lowest overall NIBRS participation rate among U.S. regions at 46% compared to other regions that ranged from 84-90%. At the state level, Pennsylvania had the lowest reporting percentage at 11%, followed by Florida at 18%. According to the [Pennsylvania Department of Community & Economic Development](https://dced.pa.gov/local-government/police/), PA has more police departments than any other state, with over half having less than 10 officers each. The sheer number of agencies, coupled with their smaller sizes, explains why has a larger, more negative, bar on the diverging plot compared to high population states like FL and CA. It may also have an outsized influence on the region, helping to explain the large gap betweent the Northeast and other regions. Pennsylvania and Florida both have a large number of non-city agencies as well, which aligns with my hypothesis that variation in agencies would be a contributing factor, though PA has a larger number of "city" agency types in the non-reporting bucket.
+
+## Question 2: NIBRS Participation by State and Agency Type
+
+#### Introduction
+
+-   **Question:** How has NIBRS participation expanded geographically from 1985 to 2024?
+
+-   **Hypothesis:** NIBRS adoption has increased more rapidly in the last decade due to advancements in technology and broader adoption of centralized and streamlined data collection and reporting systems. I expect states with smaller populations to have higher adoption rates earlier, while more populous states will lag behind.
+
+#### Approach
+
+Agencies were grouped into decades based on when they joined NIBRS (1985-1994, 1995-2004, 2005-2014, 2015-2024). County data was obtained from `tigris` and joined to matching county names in the `agencies.csv` to approximately plot agency locations and visualize participation growth in each decade (longitude/latitude coordinates in the .csv resulted in more off-map points, either error on my end or a few incorrect points in the file). While a map with Hawaii and Alaska was used as the base, coordinates could not be mapped to the inserted states, so those agencies were removed as more realistic maps were difficult to read due to geographic spread. Results were faceted by decade to allow for growth comparisons.
+
+#### Analysis
+
+```{r}
+#| label: Q2-plot-prep
+#| message: false
+#| warning: false
+#| echo: false
+#| include: false
+
+agencies_years <- agencies |>
+  filter(is_nibrs=="TRUE", !is.na(nibrs_start_date)) |>
+  mutate(
+    year=year(ymd(nibrs_start_date)),
+    decade=case_when(
+      year < 1995 ~ "1985–1994",
+      year < 2005 ~ "1995–2004",
+      year < 2015 ~ "2005–2014",
+      TRUE ~ "2015–2024"
+    )
+  )
+
+us_counties <- counties(year=2021) |>
+  transmute(
+    STATEFP, COUNTYFP, NAME,  
+    county=toupper(NAME),  #all caps in agencies
+    long=as.numeric(INTPTLON),  
+    lat=as.numeric(INTPTLAT),  
+    geometry
+  )
+
+# unfortunately not working well with map I was using, AL and HI dropped for time
+agencies_with_coords <- agencies_years |>
+  filter(!state %in% c("Alaska", "Hawaii"), !is.na(county)) |>
+  mutate(
+    county=toupper(county)
+  ) |>
+  left_join(us_counties, by=c("county"))
+
+agencies_plot <- agencies_with_coords |>
+  filter(!is.na(lat) & !is.na(long)) |>
+  st_as_sf(coords=c("long", "lat"), crs=4326)
+```
+
+```{r}
+#| label: decade-maps
+#| echo: true
+#| warning: false
+#| message: false
+#| fig-width: 6
+#| fig-height: 4
+#| code-fold: true
+
+ggplot() +
+  geom_sf(data=us_states, fill="gray90", color="white") +
+  geom_sf(
+    data=agencies_plot, 
+    aes(color=decade), 
+    size=0.8, alpha=0.6
+    ) +
+  scale_color_manual(name="Decade", 
+                     values=c("purple4", "cyan3", "darkblue", "magenta")) +
+   labs(
+    title="Expansion of NIBRS Participation by Decade (1985–2024)",
+    caption = "Source: Shapefiles obtained using {tigris} R package, v2.0.1.\nNIBRS join dates sourced via the TidyTuesday project (Feb 18, 2025).\nHawaii and Alaska agencies excluded from plot"
+  ) +
+  coord_sf(datum=NA) +
+  facet_wrap(~decade) +
+  theme_minimal()
+
+```
+
+#### Discussion
+
+During the earliest period (1985-1994), agency participation appears fairly high on the East coast but sparce in the West. More expansion is seen from 1995-2014, particularly in the Northwest. In the last decade, far more expansion is seen in the West and other areas continue to see increases in participation and are now densely covered. While difficult to quantify from these maps, the hypothesis appears to hold true for the Southwest, which had delayed but significant adoption during the last decade.
