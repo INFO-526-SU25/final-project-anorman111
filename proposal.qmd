@@ -15,6 +15,7 @@ format:
 editor: visual
 code-annotations: hover
 execute:
+  echo: false
   warning: false
 ---
 
@@ -59,7 +60,7 @@ start_date <- agencies$nibrs_start_date
 
 ```
 
-This dataset was sourced from the [FBI's Crime Data API](#0) and curated by [Ford Johnson](#0) for the [TidyTuesday project on February 18, 2025](#0). The data includes law enforcement participation in the National Incident-Based Reporting System (NIBRS), agency names, type (county/city), geographic location, and reporting start date.
+This dataset was sourced from the [FBI's Crime Data API](https://cde.ucr.cjis.gov/LATEST/webapp/#/pages/docApi) and curated by [Ford Johnson](https://github.com/bradfordjohnson) for the [TidyTuesday project on February 18, 2025](https://github.com/rfordatascience/tidytuesday/tree/main/data/2025/2025-02-18). The data includes law enforcement participation in the National Incident-Based Reporting System (NIBRS), agency names, type (county/city), geographic location, and reporting start date.
 
 #### Dataset Overview
 
@@ -142,7 +143,7 @@ I selected this dataset because it includes geographic variables such as `longit
 
 ## Questions
 
-1.  Which U.S. states and regions have lower levels of of NIBRS adoption by law enforcement agencies, and are there patterns by by geography or agency type?
+1.  Which U.S. states and regions have lower levels of NIBRS adoption by law enforcement agencies, and are there patterns by geography or agency type?
     1.  Hypothesis: States with a mix of large cities and rural areas will have lower NIBRS participation due to variation in agency structure and likelihood of having a large number of total agencies.
 2.  How has NIBRS participation expanded geographically from 1985 to 2024?
     1.  Hypothesis: NIBRS adoption has increased more rapidly in the last decade due to advancements in technology and broader adoption of centralized and streamlined data collection and reporting systems. I expect states with smaller populations to have higher adoption rates earlier, while more populous states will lag behind.
@@ -214,7 +215,7 @@ agencies |>
   theme(legend.position = "right")
 ```
 
--   Question 2: Similar to Question 1, I will build off of the current participation calculations to analyze participation expansion over time. While the `usmap` package was utilized to create the map above, but I do not belive it has coordinate plotting capabilities. Alternatives will be explored but I may change to county plotting if needed for time restraints.
+-   Question 2: Similar to Question 1, I will build off of the current participation calculations to analyze participation expansion over time. While the `usmap` package was utilized to create the map above, but I do not believe it has coordinate plotting capabilities. Alternatives will be explored but I may change to county plotting if needed for time restraints.
     -   Quantitative Methods: Rates of adoption will be calculated for each year and/or time period - potentially as trend lines for general direction and rates of adoption or growth curves for cumulative change.
     -   Visual Methods: Faceted maps to show changes in participation over time covering 1985-2024 (likely groups of either 5 or 10 years - e.g., 1985-1994, 1995-2004, 2005-2014, 2015-2024) - may also explore animation if possible. Depending on the final quantitative methods, other visualizations such as line charts, bar plots, or cumulative growth curves may be included to help represent results over time.
     -   Variables:
