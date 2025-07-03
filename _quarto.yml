@@ -1,10 +1,8 @@
 project:
   type: website
-  output-dir: docs 
 
 website:
   title: "Mapping FBI Crime Data Reporting Across the U.S."
-  site-url: https://anorman111.github.io/final-project-anorman111/
   navbar:
     right:
       - icon: github
