@@ -25,7 +25,8 @@ execute:
 pacman::p_load(tidymodels,
                tidyverse,
                broom,#remove tidy error on render
-               #penguins, #remove penguins error on render
+               magick, 
+               animation, 
                palmerpenguins
                )
 
@@ -47,124 +48,79 @@ knitr::opts_chunk$set(
   )
 ```
 
-```{r}
-#| label: load-data
-#| include: false
-# Load data here
-data(mtcars)
-mtcars$speed <- mtcars$hp / mtcars$wt
+## Dataset
 
-data("penguins")
-```
+-   "Agencies from the FBI Crime Data API" released February 18th, 2025 for TidyTuesday
 
-# Using Quarto for presentations
+-   Sourced from the FBI's Crime Data API
 
-## Quarto
+-   Data related to participation in the National Incident-Based Reporting System (NIBRS), a system for collecting detailed crime reports from law enforcement agencies
 
--   The presentation is created using the Quarto CLI
+    -   Includes: agency names, locations (county, state, geographic coordinates), agency types, report start date
 
--   `##` sets the start of a new slide
+## Question 1: NIBRS Participation by State and Agency Type
 
-## Layouts
+**Question:** Which U.S. states and regions have lower levels of NIBRS adoption by law enforcement agencies, and are there patterns by geography or agency type?
 
-You can use plain text
+-   Explored how U.S. NIBRS participation varies by state, region, and agency type with 2 visualizations:
 
-::: columns
-::: {.column width="40%"}
--   or bullet points[^1]
-:::
+    -   A series of U.S. maps showing participation by region and state (compiled as GIF)
 
-::: {.column width="60%"}
-or in two columns
-:::
-:::
+    -   A diverging bar chart breaking down agency reporting by type in the 10 states with the lowest levels of participation
 
-[^1]: And add footnotes
-
--   like
-
--   this
-
-## Code
-
-```{r, echo=FALSE}
-model <- lm(mpg ~ speed, data = mtcars) 
-
-model |> tidy()
-
-model |> glance()
-
-```
-
-## Plots
-
-```{r}
-penguins |>
-  mutate(species = ifelse(species == "Adelie", "Adelie", "Other")) |>
-  ggplot(aes(x = flipper_length_mm, y = body_mass_g, color = species)) +
-  geom_point()
-```
-
-## Plot and text
+## Question 1: NIBRS Participation by State and Agency Type
 
 ::: columns
-::: {.column width="50%"}
--   Some text
 
--   goes here
+::: {.column width="30%"}
+-    `sf` and `tigris` used for spacial mapping
 :::
 
-::: {.column width="50%"}
-```{r, warning=FALSE, fig.width=5.5}
-penguins |>
-  ggplot(aes(x = bill_length_mm, y = species, color = species)) +
-  geom_boxplot(linewidth = 0.75,
-               outlier.size = 2.5) +
-  theme_minimal(base_size = 15) +
-  theme(legend.key.size = unit(0.8, "cm"))
-```
+::: {.column width="70%"}
+![](images/Q1animation.gif)
 :::
 :::
 
-# A new section...
+## Question 1: NIBRS Participation by State and Agency Type
 
-## Tables
+::: columns
+::: {.column width="30%"}
+-   Diverging bars for a more detailed look at reporting and non-reporting agency types
+:::
 
-If you want to generate a table, make sure it is in the HTML format (instead of Markdown or other formats), e.g.,
+::: {.column width="70%"}
+![](images/Q1diverge.png)
+:::
+:::
 
-```{r}
-#penguins |> 
- # head() |>
-  #kableExtra::kable() |>
-  #kableExtra::kable_styling()
-```
+## Question 1: NIBRS Participation by State and Agency Type
 
-## Images
+-   Lowest participation region: **Northeast (46%)**
 
-![Image credit: Danielle Navarro, Percolate.](images/watercolour_sys02_img34_teacup-ocean.png){fig-align="center" width="500"}
+-   Lowest participation state: **Pennsylvania** **(11%)** which has the most police departments in the U.S.
 
-## Math Expressions {.smaller}
+    -   10 or less officers in over half of agencies
 
-You can write LaTeX math expressions inside a pair of dollar signs, e.g. \$\\alpha+\\beta\$ renders $\alpha + \beta$. You can use the display style with double dollar signs:
+-   Contributing factors: Number and variety of agencies
 
-```         
-$$\bar{X}=\frac{1}{n}\sum_{i=1}^nX_i$$
-```
+## Question 2: NIBRS Participation Over Time
 
-$$
-\bar{X}=\frac{1}{n}\sum_{i=1}^nX_i
-$$
+**Question:** How has NIBRS participation expanded geographically from 1985 to 2024?
 
-Limitations:
+-   Participation mapped by decade of adoption (1985--2024)
 
-1.  The source code of a LaTeX math expression must be in one line, unless it is inside a pair of double dollar signs, in which case the starting `$$` must appear in the very beginning of a line, followed immediately by a non-space character, and the ending `$$` must be at the end of a line, led by a non-space character;
+-   Agency growth shown in **faceted maps** to highlight regional expansion over time
 
-2.  There should not be spaces after the opening `$` or before the closing `$`.
+## Question 2: NIBRS Participation Over Time
 
-# Wrap up
+![](images/Q2plot.png)
 
-## Feeling adventurous?
+## Question 2: NIBRS Participation Over Time
 
--   You are welcomed to use the default styling of the slides. In fact, that's what I expect majority of you will do. You will differentiate yourself with the content of your presentation.
+-   Early adoption (1985--1994) concentrated in Eastern states, sparse in the West
 
--   But some of you might want to play around with slide styling. Some solutions for this can be found at https://quarto.org/docs/presentations/revealjs.
+-   Expansion spread Northwest from 1995--2014, with increasing national coverage
+
+-   Last decade shows substantial growth in the Southwest and continued gains elsewhere
+
+## 

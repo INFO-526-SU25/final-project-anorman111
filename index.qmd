@@ -261,7 +261,7 @@ image_write(Q1gif, "images/Q1animation.gif")
 #| fig-height: 4
 #| code-fold: true
 
-ggplot(agency_diverging, 
+q1div <- ggplot(agency_diverging, 
        aes(x=count, y=reorder(state, count), fill=agency_type)) +
   geom_bar(stat="identity", position="stack") +
   geom_vline(xintercept=0, color="gray40", linetype="dashed") +
@@ -275,14 +275,16 @@ ggplot(agency_diverging,
   ) +
   theme_minimal()
 
+ggsave(path="images", filename="Q1diverge.png", q1div, width=6, height=3.5, dpi=150)
 
+q1div
 ```
 
 #### Discussion
 
 The map and regional summary revealed that the Northeast region has the lowest overall NIBRS participation rate among U.S. regions at 46% compared to other regions that ranged from 84-90%. At the state level, Pennsylvania had the lowest reporting percentage at 11%, followed by Florida at 18%. According to the [Pennsylvania Department of Community & Economic Development](https://dced.pa.gov/local-government/police/), PA has more police departments than any other state, with over half having less than 10 officers each. The sheer number of agencies, coupled with their smaller sizes, explains why has a larger, more negative, bar on the diverging plot compared to high population states like FL and CA. It may also have an outsized influence on the region, helping to explain the large gap betweent the Northeast and other regions. Pennsylvania and Florida both have a large number of non-city agencies as well, which aligns with my hypothesis that variation in agencies would be a contributing factor, though PA has a larger number of "city" agency types in the non-reporting bucket.
 
-## Question 2: NIBRS Participation by State and Agency Type
+## Question 2: NIBRS Participation Over Time
 
 #### Introduction
 
@@ -346,12 +348,12 @@ agencies_plot <- agencies_with_coords |>
 #| fig-height: 4
 #| code-fold: true
 
-ggplot() +
+q2plot <- ggplot() +
   geom_sf(data=us_states, fill="gray90", color="white") +
   geom_sf(
     data=agencies_plot, 
     aes(color=decade), 
-    size=0.8, alpha=0.6
+    size=0.7, alpha=0.6
     ) +
   scale_color_manual(name="Decade", 
                      values=c("purple4", "cyan3", "darkblue", "magenta")) +
@@ -362,6 +364,10 @@ ggplot() +
   coord_sf(datum=NA) +
   facet_wrap(~decade) +
   theme_minimal()
+
+ggsave(path="images", filename="Q2plot.png", q2plot, width=6, height=3.5, dpi=300)
+
+q2plot
 
 ```
 

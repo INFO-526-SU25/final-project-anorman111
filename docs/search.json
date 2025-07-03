@@ -1,33 +1,5 @@
 [
   {
-    "objectID": "index.html",
-    "href": "index.html",
-    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "",
-    "text": "This project uses data on law enforcement participation in the National Incident-Based Reporting System (NIBRS), sourced from the FBI’s Crime Data API and curated by Ford Johnson for the TidyTuesday project on February 18, 2025. NIBRS is a reporting system for collecting detailed, incident-level information on crimes. Introduced in the 1980’s, NIBRS has become the primary system for collecting and reporting crime data to the FBI after the Uniform Crime Reporting (UCR) program was phased out and officially retired in 2021 (Ridgeway, 2024). The data set includes agency names, types (e.g., city, county, tribal), geographic details, and reporting start dates."
-  },
-  {
-    "objectID": "index.html#introduction",
-    "href": "index.html#introduction",
-    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "",
-    "text": "This project uses data on law enforcement participation in the National Incident-Based Reporting System (NIBRS), sourced from the FBI’s Crime Data API and curated by Ford Johnson for the TidyTuesday project on February 18, 2025. NIBRS is a reporting system for collecting detailed, incident-level information on crimes. Introduced in the 1980’s, NIBRS has become the primary system for collecting and reporting crime data to the FBI after the Uniform Crime Reporting (UCR) program was phased out and officially retired in 2021 (Ridgeway, 2024). The data set includes agency names, types (e.g., city, county, tribal), geographic details, and reporting start dates."
-  },
-  {
-    "objectID": "index.html#question-1-nibrs-participation-by-state-and-agency-type",
-    "href": "index.html#question-1-nibrs-participation-by-state-and-agency-type",
-    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "Question 1: NIBRS Participation by State and Agency Type",
-    "text": "Question 1: NIBRS Participation by State and Agency Type\n\nIntroduction\n\nQuestion: Which U.S. states and regions have lower levels of NIBRS adoption by law enforcement agencies, and are there patterns by geography or agency type?\nHypothesis: States with a mix of large cities and rural areas will have lower NIBRS participation due to variation in agency structure and a higher number of total agencies.\n\nThis question focuses no identifying U.S. states and regions (Northeast, Midwest, South, and West) with the lowest levels of participation in NIBRS. Agency-level data was used to summarize participation status by state, then regional classifications were added to group the results by area. Agency type was also included to determine if low compliance rates were driven by common types (city, county) or more likely to occur in areas with a wider variety of smaller agencies.\n\n\nApproach\nTwo visualizations were created to explore current NIBRS participation by region, state, and agency type. The first, FBI Crime Reporting Participation, is a series of maps that uses a 50 state layout of the United States with inserts of Alaska and Hawaii for ease of viewing and to align with the agencies dataset, which does not include any additional U.S. territories. The maps were created using the sf package to handle spacial data and state shapes via the tigris package. There are two regional maps (with and without state outlines) that use grouped results for percent participation by region, as well as a state-level map with color fill representing participation levels. Plot animation was attempted using gganimate, but issues with the multi-layer region-only map led to a switch to a simple GIF created using magick.\nThe second plot, Reported vs Not Reported Agencies by Type, is a horizontal diverging bar chart of the number of agencies within the 10 states with the lowest reporting percentages. Each bar is stacked by agency type and split by reporting status (reporting on the right, non-reporting on the left). This format shows allows for visualization of the total number of agencies within these states, while allowing for division by agency type and reporting status. It was chosen to complement the map plot by providing more detail on the least compliant states and answer the second half of the Question 1.\n\n\nAnalysis\n\n\nCode\nQ1_map_function &lt;- function(participation_column, subtitles, color1, region_outlines=NULL) {\n  Q1_map &lt;- ggplot() +\n    geom_sf(data=us_states, aes(fill={{ participation_column }}), color=color1, linewidth=0.5)\n  \n  # Layer only for region outlines\n  if (!is.null(region_outlines)) {\n    Q1_map &lt;- Q1_map + geom_sf(data=region_outlines, fill=NA, color=\"white\", linewidth=0.5)\n  }\n  Q1_map + scale_fill_viridis_c(\n      option=\"plasma\", direction=-1,\n      limits=c(0, 1),\n      breaks=c(0.25, 0.5, 0.75, 1),\n      labels=percent_format(accuracy=1)\n    ) +\n    coord_sf(\n      xlim=c(usbbox[\"xmin\"], usbbox[\"xmax\"]),\n      ylim=c(usbbox[\"ymin\"], usbbox[\"ymax\"]),\n      expand=FALSE,\n      datum=NA\n    ) +\n    labs(\n      title=\"FBI Crime Reporting Participation\",\n      subtitle=subtitles,\n      caption=\"Source: Shapefiles obtained using {tigris} R package, v2.0.1.\\nNIBRS participation data sourced via the TidyTuesday project (Feb 18, 2025).\\nRegional groupings based on CDC definitions.\",\n      fill=\"Percent Participating\"\n    ) +\n    theme_void()\n}\n\nQ1map1 &lt;- Q1_map_function(\n  participation_column=Region_Participation,\n  subtitles=\"By Region\",\n  color1=NA,\n  region_outlines=region_shapes\n  )\n\nQ1map2 &lt;- Q1_map_function(\n  participation_column=Region_Participation,\n  subtitles=\"By Region\",\n  color1=\"white\"\n)\n\nQ1map3 &lt;- Q1_map_function(\n  participation_column=Percent_Participating,\n  subtitles=\"By State\",\n  color1=\"white\"\n)\n\n#https://stackoverflow.com/questions/65571964/create-fade-in-and-fade-out-gif-in-r-magick-package\n\nggsave(path=\"images\", filename=\"Q1map1.png\", Q1map1, width=6, height=3.5, dpi=150)\nggsave(path=\"images\", filename=\"Q1map2.png\", Q1map2, width=6, height=3.5, dpi=150)\nggsave(path=\"images\", filename=\"Q1map3.png\", Q1map3, width=6, height=3.5, dpi=150)\n\nmap1png &lt;- image_read(\"images/Q1map1.png\")\nmap2png &lt;- image_read(\"images/Q1map2.png\")\nmap3png &lt;- image_read(\"images/Q1map3.png\")\n\nQ1gif &lt;-  c(map1png, map2png, map3png, map2png) |&gt;\n  image_morph(25) |&gt;\n  image_animate(fps=5, optimize=TRUE) |&gt;\n  suppressMessages()\n\nimage_write(Q1gif, \"images/Q1animation.gif\")\n\n\n\n\n\nCode\nggplot(agency_diverging, \n       aes(x=count, y=reorder(state, count), fill=agency_type)) +\n  geom_bar(stat=\"identity\", position=\"stack\") +\n  geom_vline(xintercept=0, color=\"gray40\", linetype=\"dashed\") +\n  scale_fill_viridis_d(option=\"plasma\") +  \n  labs(\n    title=\"Reported vs Not Reported Agencies by Type (10 lowest participation states)\",\n    caption=\"Source: FBI Crime Data API via the TidyTuesday project (Feb 18, 2025).\",\n    x=\"Number of Agencies (Not Reported | Reported)\",\n    y=\"State\",\n    fill=\"Agency Type\"\n  ) +\n  theme_minimal()\n\n\n\n\n\n\n\nDiscussion\nThe map and regional summary revealed that the Northeast region has the lowest overall NIBRS participation rate among U.S. regions at 46% compared to other regions that ranged from 84-90%. At the state level, Pennsylvania had the lowest reporting percentage at 11%, followed by Florida at 18%. According to the Pennsylvania Department of Community & Economic Development, PA has more police departments than any other state, with over half having less than 10 officers each. The sheer number of agencies, coupled with their smaller sizes, explains why has a larger, more negative, bar on the diverging plot compared to high population states like FL and CA. It may also have an outsized influence on the region, helping to explain the large gap betweent the Northeast and other regions. Pennsylvania and Florida both have a large number of non-city agencies as well, which aligns with my hypothesis that variation in agencies would be a contributing factor, though PA has a larger number of “city” agency types in the non-reporting bucket."
-  },
-  {
-    "objectID": "index.html#question-2-nibrs-participation-by-state-and-agency-type",
-    "href": "index.html#question-2-nibrs-participation-by-state-and-agency-type",
-    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "Question 2: NIBRS Participation by State and Agency Type",
-    "text": "Question 2: NIBRS Participation by State and Agency Type\n\nIntroduction\n\nQuestion: How has NIBRS participation expanded geographically from 1985 to 2024?\nHypothesis: NIBRS adoption has increased more rapidly in the last decade due to advancements in technology and broader adoption of centralized and streamlined data collection and reporting systems. I expect states with smaller populations to have higher adoption rates earlier, while more populous states will lag behind.\n\n\n\nApproach\nAgencies were grouped into decades based on when they joined NIBRS (1985-1994, 1995-2004, 2005-2014, 2015-2024). County data was obtained from tigris and joined to matching county names in the agencies.csv to approximately plot agency locations and visualize participation growth in each decade (longitude/latitude coordinates in the .csv resulted in more off-map points, either error on my end or a few incorrect points in the file). While a map with Hawaii and Alaska was used as the base, coordinates could not be mapped to the inserted states, so those agencies were removed as more realistic maps were difficult to read due to geographic spread. Results were faceted by decade to allow for growth comparisons.\n\n\nAnalysis\n\n\nCode\nggplot() +\n  geom_sf(data=us_states, fill=\"gray90\", color=\"white\") +\n  geom_sf(\n    data=agencies_plot, \n    aes(color=decade), \n    size=0.8, alpha=0.6\n    ) +\n  scale_color_manual(name=\"Decade\", \n                     values=c(\"purple4\", \"cyan3\", \"darkblue\", \"magenta\")) +\n   labs(\n    title=\"Expansion of NIBRS Participation by Decade (1985–2024)\",\n    caption = \"Source: Shapefiles obtained using {tigris} R package, v2.0.1.\\nNIBRS join dates sourced via the TidyTuesday project (Feb 18, 2025).\\nHawaii and Alaska agencies excluded from plot\"\n  ) +\n  coord_sf(datum=NA) +\n  facet_wrap(~decade) +\n  theme_minimal()\n\n\n\n\n\n\n\nDiscussion\nDuring the earliest period (1985-1994), agency participation appears fairly high on the East coast but sparce in the West. More expansion is seen from 1995-2014, particularly in the Northwest. In the last decade, far more expansion is seen in the West and other areas continue to see increases in participation and are now densely covered. While difficult to quantify from these maps, the hypothesis appears to hold true for the Southwest, which had delayed but significant adoption during the last decade."
-  },
-  {
     "objectID": "proposal.html",
     "href": "proposal.html",
     "title": "Mapping FBI Crime Data Reporting Across the U.S.",
@@ -63,6 +35,41 @@
     "text": "Plan of Attack\n\n\n\n\n\n\n  \n    \n      Plan of Attack Timeline\n    \n    \n    \n      Task Name\n      Status\n      Due\n      Priority\n      Summary\n    \n  \n  \n    Proposal draft\nComplete\n06/10/25\nHigh\nDraft proposal with questions, analysis plan, and exploratory analysis/visualization\n    Resolve peer/instructor review\nComplete\n06/18/25\nHigh\nAddress feedback received during peer/instructor review\n    Data wrangling\nIn progress\n06/21/25\nModerate\nPrepare data for analysis, finalize required variables\n    Q1 Analysis calculations\nIn progress\n06/22/25\nModerate\nCalculate participation by area and agency type\n    Q1 Complete visualizations\nIn progress\n06/24/25\nModerate\nCreate plots and summaries by agency type and region\n    Q2 Analysis calculations\nTo be completed\n06/28/25\nModerate\nCalculate rates of adoption over time\n    Q2 Complete visualizations\nTo be completed\n06/29/25\nModerate\nCreate maps and time-based plots\n    Finalize project and presentation\nTo be completed\n07/02/25\nHigh\nComplete and polish results summaries and interpretation; finish and record presentation\n    Submit final report\nTo be completed\n07/02/25\nHigh\nSubmit final report, recorded presentation, and website"
   },
   {
+    "objectID": "index.html",
+    "href": "index.html",
+    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
+    "section": "",
+    "text": "This project uses data on law enforcement participation in the National Incident-Based Reporting System (NIBRS), sourced from the FBI’s Crime Data API and curated by Ford Johnson for the TidyTuesday project on February 18, 2025. NIBRS is a reporting system for collecting detailed, incident-level information on crimes. Introduced in the 1980’s, NIBRS has become the primary system for collecting and reporting crime data to the FBI after the Uniform Crime Reporting (UCR) program was phased out and officially retired in 2021 (Ridgeway, 2024). The data set includes agency names, types (e.g., city, county, tribal), geographic details, and reporting start dates."
+  },
+  {
+    "objectID": "index.html#introduction",
+    "href": "index.html#introduction",
+    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
+    "section": "",
+    "text": "This project uses data on law enforcement participation in the National Incident-Based Reporting System (NIBRS), sourced from the FBI’s Crime Data API and curated by Ford Johnson for the TidyTuesday project on February 18, 2025. NIBRS is a reporting system for collecting detailed, incident-level information on crimes. Introduced in the 1980’s, NIBRS has become the primary system for collecting and reporting crime data to the FBI after the Uniform Crime Reporting (UCR) program was phased out and officially retired in 2021 (Ridgeway, 2024). The data set includes agency names, types (e.g., city, county, tribal), geographic details, and reporting start dates."
+  },
+  {
+    "objectID": "index.html#question-1-nibrs-participation-by-state-and-agency-type",
+    "href": "index.html#question-1-nibrs-participation-by-state-and-agency-type",
+    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
+    "section": "Question 1: NIBRS Participation by State and Agency Type",
+    "text": "Question 1: NIBRS Participation by State and Agency Type\n\nIntroduction\n\nQuestion: Which U.S. states and regions have lower levels of NIBRS adoption by law enforcement agencies, and are there patterns by geography or agency type?\nHypothesis: States with a mix of large cities and rural areas will have lower NIBRS participation due to variation in agency structure and a higher number of total agencies.\n\nThis question focuses no identifying U.S. states and regions (Northeast, Midwest, South, and West) with the lowest levels of participation in NIBRS. Agency-level data was used to summarize participation status by state, then regional classifications were added to group the results by area. Agency type was also included to determine if low compliance rates were driven by common types (city, county) or more likely to occur in areas with a wider variety of smaller agencies.\n\n\nApproach\nTwo visualizations were created to explore current NIBRS participation by region, state, and agency type. The first, FBI Crime Reporting Participation, is a series of maps that uses a 50 state layout of the United States with inserts of Alaska and Hawaii for ease of viewing and to align with the agencies dataset, which does not include any additional U.S. territories. The maps were created using the sf package to handle spacial data and state shapes via the tigris package. There are two regional maps (with and without state outlines) that use grouped results for percent participation by region, as well as a state-level map with color fill representing participation levels. Plot animation was attempted using gganimate, but issues with the multi-layer region-only map led to a switch to a simple GIF created using magick.\nThe second plot, Reported vs Not Reported Agencies by Type, is a horizontal diverging bar chart of the number of agencies within the 10 states with the lowest reporting percentages. Each bar is stacked by agency type and split by reporting status (reporting on the right, non-reporting on the left). This format shows allows for visualization of the total number of agencies within these states, while allowing for division by agency type and reporting status. It was chosen to complement the map plot by providing more detail on the least compliant states and answer the second half of the Question 1.\n\n\nAnalysis\n\n\nCode\nQ1_map_function &lt;- function(participation_column, subtitles, color1, region_outlines=NULL) {\n  Q1_map &lt;- ggplot() +\n    geom_sf(data=us_states, aes(fill={{ participation_column }}), color=color1, linewidth=0.5)\n  \n  # Layer only for region outlines\n  if (!is.null(region_outlines)) {\n    Q1_map &lt;- Q1_map + geom_sf(data=region_outlines, fill=NA, color=\"white\", linewidth=0.5)\n  }\n  Q1_map + scale_fill_viridis_c(\n      option=\"plasma\", direction=-1,\n      limits=c(0, 1),\n      breaks=c(0.25, 0.5, 0.75, 1),\n      labels=percent_format(accuracy=1)\n    ) +\n    coord_sf(\n      xlim=c(usbbox[\"xmin\"], usbbox[\"xmax\"]),\n      ylim=c(usbbox[\"ymin\"], usbbox[\"ymax\"]),\n      expand=FALSE,\n      datum=NA\n    ) +\n    labs(\n      title=\"FBI Crime Reporting Participation\",\n      subtitle=subtitles,\n      caption=\"Source: Shapefiles obtained using {tigris} R package, v2.0.1.\\nNIBRS participation data sourced via the TidyTuesday project (Feb 18, 2025).\\nRegional groupings based on CDC definitions.\",\n      fill=\"Percent Participating\"\n    ) +\n    theme_void()\n}\n\nQ1map1 &lt;- Q1_map_function(\n  participation_column=Region_Participation,\n  subtitles=\"By Region\",\n  color1=NA,\n  region_outlines=region_shapes\n  )\n\nQ1map2 &lt;- Q1_map_function(\n  participation_column=Region_Participation,\n  subtitles=\"By Region\",\n  color1=\"white\"\n)\n\nQ1map3 &lt;- Q1_map_function(\n  participation_column=Percent_Participating,\n  subtitles=\"By State\",\n  color1=\"white\"\n)\n\n#https://stackoverflow.com/questions/65571964/create-fade-in-and-fade-out-gif-in-r-magick-package\n\nggsave(path=\"images\", filename=\"Q1map1.png\", Q1map1, width=6, height=3.5, dpi=150)\nggsave(path=\"images\", filename=\"Q1map2.png\", Q1map2, width=6, height=3.5, dpi=150)\nggsave(path=\"images\", filename=\"Q1map3.png\", Q1map3, width=6, height=3.5, dpi=150)\n\nmap1png &lt;- image_read(\"images/Q1map1.png\")\nmap2png &lt;- image_read(\"images/Q1map2.png\")\nmap3png &lt;- image_read(\"images/Q1map3.png\")\n\nQ1gif &lt;-  c(map1png, map2png, map3png, map2png) |&gt;\n  image_morph(25) |&gt;\n  image_animate(fps=5, optimize=TRUE) |&gt;\n  suppressMessages()\n\nimage_write(Q1gif, \"images/Q1animation.gif\")\n\n\n\n\n\nCode\nq1div &lt;- ggplot(agency_diverging, \n       aes(x=count, y=reorder(state, count), fill=agency_type)) +\n  geom_bar(stat=\"identity\", position=\"stack\") +\n  geom_vline(xintercept=0, color=\"gray40\", linetype=\"dashed\") +\n  scale_fill_viridis_d(option=\"plasma\") +  \n  labs(\n    title=\"Reported vs Not Reported Agencies by Type (10 lowest participation states)\",\n    caption=\"Source: FBI Crime Data API via the TidyTuesday project (Feb 18, 2025).\",\n    x=\"Number of Agencies (Not Reported | Reported)\",\n    y=\"State\",\n    fill=\"Agency Type\"\n  ) +\n  theme_minimal()\n\nggsave(path=\"images\", filename=\"Q1diverge.png\", q1div, width=6, height=3.5, dpi=150)\n\nq1div\n\n\n\n\n\n\n\nDiscussion\nThe map and regional summary revealed that the Northeast region has the lowest overall NIBRS participation rate among U.S. regions at 46% compared to other regions that ranged from 84-90%. At the state level, Pennsylvania had the lowest reporting percentage at 11%, followed by Florida at 18%. According to the Pennsylvania Department of Community & Economic Development, PA has more police departments than any other state, with over half having less than 10 officers each. The sheer number of agencies, coupled with their smaller sizes, explains why has a larger, more negative, bar on the diverging plot compared to high population states like FL and CA. It may also have an outsized influence on the region, helping to explain the large gap betweent the Northeast and other regions. Pennsylvania and Florida both have a large number of non-city agencies as well, which aligns with my hypothesis that variation in agencies would be a contributing factor, though PA has a larger number of “city” agency types in the non-reporting bucket."
+  },
+  {
+    "objectID": "index.html#question-2-nibrs-participation-over-time",
+    "href": "index.html#question-2-nibrs-participation-over-time",
+    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
+    "section": "Question 2: NIBRS Participation Over Time",
+    "text": "Question 2: NIBRS Participation Over Time\n\nIntroduction\n\nQuestion: How has NIBRS participation expanded geographically from 1985 to 2024?\nHypothesis: NIBRS adoption has increased more rapidly in the last decade due to advancements in technology and broader adoption of centralized and streamlined data collection and reporting systems. I expect states with smaller populations to have higher adoption rates earlier, while more populous states will lag behind.\n\n\n\nApproach\nAgencies were grouped into decades based on when they joined NIBRS (1985-1994, 1995-2004, 2005-2014, 2015-2024). County data was obtained from tigris and joined to matching county names in the agencies.csv to approximately plot agency locations and visualize participation growth in each decade (longitude/latitude coordinates in the .csv resulted in more off-map points, either error on my end or a few incorrect points in the file). While a map with Hawaii and Alaska was used as the base, coordinates could not be mapped to the inserted states, so those agencies were removed as more realistic maps were difficult to read due to geographic spread. Results were faceted by decade to allow for growth comparisons.\n\n\nAnalysis\n\n\nCode\nq2plot &lt;- ggplot() +\n  geom_sf(data=us_states, fill=\"gray90\", color=\"white\") +\n  geom_sf(\n    data=agencies_plot, \n    aes(color=decade), \n    size=0.7, alpha=0.6\n    ) +\n  scale_color_manual(name=\"Decade\", \n                     values=c(\"purple4\", \"cyan3\", \"darkblue\", \"magenta\")) +\n   labs(\n    title=\"Expansion of NIBRS Participation by Decade (1985–2024)\",\n    caption = \"Source: Shapefiles obtained using {tigris} R package, v2.0.1.\\nNIBRS join dates sourced via the TidyTuesday project (Feb 18, 2025).\\nHawaii and Alaska agencies excluded from plot\"\n  ) +\n  coord_sf(datum=NA) +\n  facet_wrap(~decade) +\n  theme_minimal()\n\nggsave(path=\"images\", filename=\"Q2plot.png\", q2plot, width=6, height=3.5, dpi=300)\n\nq2plot\n\n\n\n\n\n\n\nDiscussion\nDuring the earliest period (1985-1994), agency participation appears fairly high on the East coast but sparce in the West. More expansion is seen from 1995-2014, particularly in the Northwest. In the last decade, far more expansion is seen in the West and other areas continue to see increases in participation and are now densely covered. While difficult to quantify from these maps, the hypothesis appears to hold true for the Southwest, which had delayed but significant adoption during the last decade."
+  },
+  {
+    "objectID": "about.html",
+    "href": "about.html",
+    "title": "About",
+    "section": "",
+    "text": "This project was developed by Ashton Norman For INFO 526 - Data Analysis and Visualization at the University of Arizona, taught by Dr. Greg Chism. This was an individual project.\n\nAshton Norman: Systems Engineering Master’s student at the College of Engineering; Program Coordinator for the Environment, Exposure Science & Risk Assessment Center at the College of Public Health."
+  },
+  {
     "objectID": "data/agencies_readme.html",
     "href": "data/agencies_readme.html",
     "title": "Agencies from the FBI Crime Data API",
@@ -91,87 +98,59 @@
     "text": "Exploring the TidyTuesday data in Python? Posit has some extra resources for you! Have you tried making a Quarto dashboard? Find videos and other resources in Posit’s PydyTuesday repo.\nShare your work with the world using the hashtags #TidyTuesday and #PydyTuesday so that Posit has the chance to highlight your work, too!\nDeploy or share your work however you want! If you’d like a super easy way to publish your work, give Connect Cloud a try."
   },
   {
-    "objectID": "about.html",
-    "href": "about.html",
-    "title": "About",
-    "section": "",
-    "text": "This project was developed by Ashton Norman For INFO 526 - Data Analysis and Visualization at the University of Arizona, taught by Dr. Greg Chism. This was an individual project.\n\nAshton Norman: Systems Engineering Master’s student at the College of Engineering; Program Coordinator for the Environment, Exposure Science & Risk Assessment Center at the College of Public Health."
+    "objectID": "presentation.html#dataset",
+    "href": "presentation.html#dataset",
+    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
+    "section": "Dataset",
+    "text": "Dataset\n\n“Agencies from the FBI Crime Data API” released February 18th, 2025 for TidyTuesday\nSourced from the FBI’s Crime Data API\nData related to participation in the National Incident-Based Reporting System (NIBRS), a system for collecting detailed crime reports from law enforcement agencies\n\nIncludes: agency names, locations (county, state, geographic coordinates), agency types, report start date"
   },
   {
-    "objectID": "presentation.html",
-    "href": "presentation.html",
+    "objectID": "presentation.html#question-1-nibrs-participation-by-state-and-agency-type",
+    "href": "presentation.html#question-1-nibrs-participation-by-state-and-agency-type",
     "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "",
-    "text": "The presentation is created using the Quarto CLI\n## sets the start of a new slide\n\n\n\n\nYou can use plain text\n\n\n\nor bullet points1\n\n\nor in two columns\n\n\n\nlike\nthis\n\n\n\n\n\n\n# A tibble: 2 × 5\n  term        estimate std.error statistic       p.value\n  &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;         &lt;dbl&gt;\n1 (Intercept)   25.3      3.08        8.22 0.00000000358\n2 speed         -0.116    0.0642     -1.81 0.0806       \n\n\n# A tibble: 1 × 12\n  r.squared adj.r.squared sigma statistic p.value    df logLik   AIC   BIC\n      &lt;dbl&gt;         &lt;dbl&gt; &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;\n1    0.0983        0.0682  5.82      3.27  0.0806     1  -101.  207.  212.\n# ℹ 3 more variables: deviance &lt;dbl&gt;, df.residual &lt;int&gt;, nobs &lt;int&gt;\n\n\n\n\n\n\n\nWarning: Removed 2 rows containing missing values or values outside the scale range\n(`geom_point()`).\n\n\n\n\n\n\n\n\n\n\n\nSome text\ngoes here"
+    "section": "Question 1: NIBRS Participation by State and Agency Type",
+    "text": "Question 1: NIBRS Participation by State and Agency Type\nQuestion: Which U.S. states and regions have lower levels of NIBRS adoption by law enforcement agencies, and are there patterns by geography or agency type?\n\nExplored how U.S. NIBRS participation varies by state, region, and agency type with 2 visualizations:\n\nA series of U.S. maps showing participation by region and state (compiled as GIF)\nA diverging bar chart breaking down agency reporting by type in the 10 states with the lowest levels of participation"
   },
   {
-    "objectID": "presentation.html#quarto",
-    "href": "presentation.html#quarto",
+    "objectID": "presentation.html#question-1-nibrs-participation-by-state-and-agency-type-1",
+    "href": "presentation.html#question-1-nibrs-participation-by-state-and-agency-type-1",
     "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "",
-    "text": "The presentation is created using the Quarto CLI\n## sets the start of a new slide"
+    "section": "Question 1: NIBRS Participation by State and Agency Type",
+    "text": "Question 1: NIBRS Participation by State and Agency Type\n\n\n\nsf and tigris used for spacial mapping"
   },
   {
-    "objectID": "presentation.html#layouts",
-    "href": "presentation.html#layouts",
+    "objectID": "presentation.html#question-1-nibrs-participation-by-state-and-agency-type-2",
+    "href": "presentation.html#question-1-nibrs-participation-by-state-and-agency-type-2",
     "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "",
-    "text": "You can use plain text\n\n\n\nor bullet points1\n\n\nor in two columns\n\n\n\nlike\nthis"
+    "section": "Question 1: NIBRS Participation by State and Agency Type",
+    "text": "Question 1: NIBRS Participation by State and Agency Type\n\n\n\nDiverging bars for a more detailed look at reporting and non-reporting agency types"
   },
   {
-    "objectID": "presentation.html#code",
-    "href": "presentation.html#code",
+    "objectID": "presentation.html#question-1-nibrs-participation-by-state-and-agency-type-3",
+    "href": "presentation.html#question-1-nibrs-participation-by-state-and-agency-type-3",
     "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "",
-    "text": "# A tibble: 2 × 5\n  term        estimate std.error statistic       p.value\n  &lt;chr&gt;          &lt;dbl&gt;     &lt;dbl&gt;     &lt;dbl&gt;         &lt;dbl&gt;\n1 (Intercept)   25.3      3.08        8.22 0.00000000358\n2 speed         -0.116    0.0642     -1.81 0.0806       \n\n\n# A tibble: 1 × 12\n  r.squared adj.r.squared sigma statistic p.value    df logLik   AIC   BIC\n      &lt;dbl&gt;         &lt;dbl&gt; &lt;dbl&gt;     &lt;dbl&gt;   &lt;dbl&gt; &lt;dbl&gt;  &lt;dbl&gt; &lt;dbl&gt; &lt;dbl&gt;\n1    0.0983        0.0682  5.82      3.27  0.0806     1  -101.  207.  212.\n# ℹ 3 more variables: deviance &lt;dbl&gt;, df.residual &lt;int&gt;, nobs &lt;int&gt;"
+    "section": "Question 1: NIBRS Participation by State and Agency Type",
+    "text": "Question 1: NIBRS Participation by State and Agency Type\n\nLowest participation region: Northeast (46%)\nLowest participation state: Pennsylvania (11%) which has the most police departments in the U.S.\n\n10 or less officers in over half of agencies\n\nContributing factors: Number and variety of agencies"
   },
   {
-    "objectID": "presentation.html#plots",
-    "href": "presentation.html#plots",
+    "objectID": "presentation.html#question-2-nibrs-participation-over-time",
+    "href": "presentation.html#question-2-nibrs-participation-over-time",
     "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "",
-    "text": "Warning: Removed 2 rows containing missing values or values outside the scale range\n(`geom_point()`)."
+    "section": "Question 2: NIBRS Participation Over Time",
+    "text": "Question 2: NIBRS Participation Over Time\nQuestion: How has NIBRS participation expanded geographically from 1985 to 2024?\n\nParticipation mapped by decade of adoption (1985–2024)\nAgency growth shown in faceted maps to highlight regional expansion over time"
   },
   {
-    "objectID": "presentation.html#plot-and-text",
-    "href": "presentation.html#plot-and-text",
+    "objectID": "presentation.html#question-2-nibrs-participation-over-time-1",
+    "href": "presentation.html#question-2-nibrs-participation-over-time-1",
     "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "",
-    "text": "Some text\ngoes here"
+    "section": "Question 2: NIBRS Participation Over Time",
+    "text": "Question 2: NIBRS Participation Over Time"
   },
   {
-    "objectID": "presentation.html#tables",
-    "href": "presentation.html#tables",
+    "objectID": "presentation.html#question-2-nibrs-participation-over-time-2",
+    "href": "presentation.html#question-2-nibrs-participation-over-time-2",
     "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "Tables",
-    "text": "Tables\nIf you want to generate a table, make sure it is in the HTML format (instead of Markdown or other formats), e.g.,"
-  },
-  {
-    "objectID": "presentation.html#images",
-    "href": "presentation.html#images",
-    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "Images",
-    "text": "Images\n\n\n\nImage credit: Danielle Navarro, Percolate."
-  },
-  {
-    "objectID": "presentation.html#math-expressions",
-    "href": "presentation.html#math-expressions",
-    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "Math Expressions",
-    "text": "Math Expressions\nYou can write LaTeX math expressions inside a pair of dollar signs, e.g. $\\alpha+\\beta$ renders \\(\\alpha + \\beta\\). You can use the display style with double dollar signs:\n$$\\bar{X}=\\frac{1}{n}\\sum_{i=1}^nX_i$$\n\\[\n\\bar{X}=\\frac{1}{n}\\sum_{i=1}^nX_i\n\\]\nLimitations:\n\nThe source code of a LaTeX math expression must be in one line, unless it is inside a pair of double dollar signs, in which case the starting $$ must appear in the very beginning of a line, followed immediately by a non-space character, and the ending $$ must be at the end of a line, led by a non-space character;\nThere should not be spaces after the opening $ or before the closing $."
-  },
-  {
-    "objectID": "presentation.html#feeling-adventurous",
-    "href": "presentation.html#feeling-adventurous",
-    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "Feeling adventurous?",
-    "text": "Feeling adventurous?\n\nYou are welcomed to use the default styling of the slides. In fact, that’s what I expect majority of you will do. You will differentiate yourself with the content of your presentation.\nBut some of you might want to play around with slide styling. Some solutions for this can be found at https://quarto.org/docs/presentations/revealjs."
-  },
-  {
-    "objectID": "presentation.html#footnotes",
-    "href": "presentation.html#footnotes",
-    "title": "Mapping FBI Crime Data Reporting Across the U.S.",
-    "section": "Footnotes",
-    "text": "Footnotes\n\n\nAnd add footnotes↩︎"
+    "section": "Question 2: NIBRS Participation Over Time",
+    "text": "Question 2: NIBRS Participation Over Time\n\nEarly adoption (1985–1994) concentrated in Eastern states, sparse in the West\nExpansion spread Northwest from 1995–2014, with increasing national coverage\nLast decade shows substantial growth in the Southwest and continued gains elsewhere"
   }
 ]
