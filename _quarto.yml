@@ -4,6 +4,7 @@ project:
 
 website:
   title: "Mapping FBI Crime Data Reporting Across the U.S."
+  site-url: https://INFO-526-SU25.github.io/final-project-anorman111/
   navbar:
     right:
       - icon: github
